@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres
+    container_name: postgres-ota
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: learn
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./dump.sql:/docker-entrypoint-initdb.d/dump.sql
