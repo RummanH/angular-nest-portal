@@ -11,7 +11,7 @@ import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { User } from '../users/entities/user.entity';
-import { AuthResponse, AuthTokens, SafeUser } from './auth.types';
+import { AuthTokens, SafeUser } from './auth.types';
 
 @Injectable()
 export class AuthService {
@@ -36,7 +36,9 @@ export class AuthService {
     );
   }
 
-  async register(dto: RegisterDto): Promise<AuthResponse> {
+  async register(
+    dto: RegisterDto,
+  ): Promise<{ tokens: AuthTokens; user: SafeUser }> {
     const exists = await this.usersService.emailExists(dto.email);
     if (exists) throw new ConflictException('Email already registered');
 
@@ -50,13 +52,10 @@ export class AuthService {
     const tokens = await this.generateTokens(user);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
-    return {
-      message: 'Registration successful',
-      data: { user: this.sanitizeUser(user), ...tokens },
-    };
+    return { tokens, user: this.sanitizeUser(user) };
   }
 
-  async login(dto: LoginDto): Promise<AuthResponse> {
+  async login(dto: LoginDto): Promise<{ tokens: AuthTokens; user: SafeUser }> {
     const user = await this.usersService.findByEmail(dto.email);
     if (!user) throw new UnauthorizedException('Invalid credentials');
 
@@ -70,24 +69,15 @@ export class AuthService {
     const tokens = await this.generateTokens(user);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
 
-    return {
-      message: 'Login successful',
-      data: { user: this.sanitizeUser(user), ...tokens },
-    };
+    return { tokens, user: this.sanitizeUser(user) };
   }
 
-  async logout(userId: string): Promise<{ message: string; data: null }> {
+  async logout(userId: string): Promise<void> {
     await this.usersService.updateRefreshToken(userId, null);
-    return { message: 'Logout successful', data: null };
   }
 
-  async refresh(userId: string, refreshToken: string): Promise<AuthTokens> {
-    const user = await this.usersService.findById(userId);
-    if (!user?.refreshToken) throw new UnauthorizedException('Access denied');
-
-    const isValid = await bcrypt.compare(refreshToken, user.refreshToken);
-    if (!isValid) throw new UnauthorizedException('Invalid refresh token');
-
+  // User already verified by JwtRefreshStrategy — just rotate tokens
+  async refresh(user: User): Promise<AuthTokens> {
     const tokens = await this.generateTokens(user);
     await this.saveRefreshToken(user.id, tokens.refreshToken);
     return tokens;
@@ -108,22 +98,6 @@ export class AuthService {
     ]);
 
     return { accessToken, refreshToken };
-  }
-
-  async refreshTokens(userId: string) {
-    const user = await this.usersService.findById(userId);
-    if (!user || !user.refreshToken) {
-      throw new UnauthorizedException('Access denied');
-    }
-
-    const tokens = await this.generateTokens(user);
-
-    await this.saveRefreshToken(user.id, tokens.refreshToken);
-
-    return {
-      message: 'Tokens refreshed',
-      data: tokens,
-    };
   }
 
   private async saveRefreshToken(

@@ -5,9 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../../users/users.service';
-
+import { JwtPayload } from '../auth.types';
 import { User } from '../../users/entities/user.entity';
-import { JwtPayload } from './jwt.strategy';
 
 @Injectable()
 export class JwtRefreshStrategy extends PassportStrategy(
@@ -19,7 +18,9 @@ export class JwtRefreshStrategy extends PassportStrategy(
     private readonly usersService: UsersService,
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        (req: Request) => req?.cookies?.['refresh_token'] ?? null,
+      ]),
       ignoreExpiration: false,
       secretOrKey: configService.getOrThrow<string>('jwt.refreshSecret'),
       passReqToCallback: true,
@@ -27,17 +28,19 @@ export class JwtRefreshStrategy extends PassportStrategy(
   }
 
   async validate(req: Request, payload: JwtPayload): Promise<User> {
-    const refreshToken = req
-      .get('Authorization')
-      ?.replace(/^Bearer\s+/i, '')
-      .trim();
+    const refreshToken = req.cookies?.['refresh_token'] as string | undefined;
 
     if (!refreshToken) {
       throw new UnauthorizedException('Access denied');
     }
 
     const user = await this.usersService.findByIdWithTokens(payload.sub);
+
     if (!user?.refreshToken) {
+      throw new UnauthorizedException('Access denied');
+    }
+
+    if (!user.isActive) {
       throw new UnauthorizedException('Access denied');
     }
 
