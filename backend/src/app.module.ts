@@ -21,7 +21,7 @@ import { UsersModule } from './modules/users/users.module';
           password: configService.getOrThrow<string>('database.password'),
           database: configService.getOrThrow<string>('database.name'),
           autoLoadEntities: true,
-          synchronize: false,
+          synchronize: true,
           logging: !isProd,
           ssl: isProd ? { rejectUnauthorized: false } : false,
           retryAttempts: 5,
