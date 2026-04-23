@@ -1,16 +1,19 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor';
 import cookieParser from 'cookie-parser';
+import { RolesGuard } from './common/guards/roles.guard';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const logger = new Logger('Bootstrap');
   const port = process.env.PORT ?? 3000;
   const isProd = process.env.NODE_ENV === 'production';
+
+  app.useGlobalGuards(new RolesGuard(new Reflector()));
 
   app.setGlobalPrefix('api/v1');
   app.enableShutdownHooks();
