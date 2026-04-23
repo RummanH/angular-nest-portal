@@ -9,6 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import * as bcrypt from 'bcrypt';
+import { Role } from '../enums/role.enum';
 
 @Entity('users')
 export class User {
@@ -29,6 +30,13 @@ export class User {
 
   @Column({ length: 60, select: false })
   password!: string;
+
+  @Column({
+    type: 'enum',
+    enum: Role,
+    default: Role.USER,
+  })
+  role!: Role;
 
   @Column({ name: 'is_active', default: true })
   isActive!: boolean;
