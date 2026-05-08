@@ -5,6 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { AuthModule } from './modules/auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
 import { AirportsModule } from './modules/airports/airports.module';
+import { VendorsModule } from './modules/vendors/vendors.module';
+import { SearchModule } from './modules/search/search.module';
+import { BookingModule } from './modules/booking/booking.module';
+import { TicketsModule } from './modules/tickets/tickets.module';
 
 @Module({
   imports: [
@@ -37,6 +41,10 @@ import { AirportsModule } from './modules/airports/airports.module';
     AuthModule,
     UsersModule,
     AirportsModule,
+    VendorsModule,
+    SearchModule,
+    BookingModule,
+    TicketsModule,
   ],
 })
 export class AppModule {}

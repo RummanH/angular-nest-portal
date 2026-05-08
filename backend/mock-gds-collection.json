@@ -1,0 +1,221 @@
+{
+  "info": {
+    "name": "Mock GDS Server",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url",      "value": "http://localhost:4000" },
+    { "key": "offer_id",      "value": "" },
+    { "key": "order_id",      "value": "" },
+    { "key": "ticket_number", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Get Token",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/v1/security/oauth2/token",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"client_id\": \"test\",\n  \"client_secret\": \"test\",\n  \"grant_type\": \"client_credentials\"\n}"
+        }
+      }
+    },
+    {
+      "name": "2. Search Flights",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/v2/shopping/flight-offers?originLocationCode=DAC&destinationLocationCode=DXB&departureDate=2026-08-01&adults=1&travelClass=ECONOMY&max=3",
+          "host": ["{{base_url}}"],
+          "path": ["v2", "shopping", "flight-offers"],
+          "query": [
+            { "key": "originLocationCode",      "value": "DAC" },
+            { "key": "destinationLocationCode", "value": "DXB" },
+            { "key": "departureDate",            "value": "2026-08-01" },
+            { "key": "adults",                   "value": "1" },
+            { "key": "travelClass",              "value": "ECONOMY" },
+            { "key": "max",                      "value": "3" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Fare Rules",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/v1/shopping/flight-offers/{{offer_id}}/fare-rules"
+      }
+    },
+    {
+      "name": "4. Verify Price",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/v1/shopping/flight-offers/pricing",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"data\": {\n    \"flightOffers\": [\n      {\n        \"id\": \"{{offer_id}}\",\n        \"price\": {\n          \"total\": \"320.00\",\n          \"currency\": \"USD\"\n        }\n      }\n    ]\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "5. Seat Map",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/v1/catalog/availability/seat-maps?offerId={{offer_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "catalog", "availability", "seat-maps"],
+          "query": [{ "key": "offerId", "value": "{{offer_id}}" }]
+        }
+      }
+    },
+    {
+      "name": "6. Create PNR (Hold Booking)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var res = pm.response.json();",
+              "if (res.data && res.data.id) {",
+              "  pm.collectionVariables.set('order_id', res.data.id);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/v1/booking/flight-orders",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"data\": {\n    \"flightOffers\": [\n      {\n        \"id\": \"{{offer_id}}\",\n        \"price\": { \"total\": \"320.00\", \"currency\": \"USD\" }\n      }\n    ],\n    \"travelers\": [\n      {\n        \"id\": \"1\",\n        \"name\": { \"firstName\": \"John\", \"lastName\": \"Doe\" }\n      }\n    ],\n    \"contacts\": [\n      {\n        \"emailAddress\": \"john@test.com\",\n        \"phones\": [{ \"number\": \"01711000000\" }]\n      }\n    ]\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "7. Retrieve PNR",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/v1/booking/flight-orders/{{order_id}}"
+      }
+    },
+    {
+      "name": "8. Cancel PNR",
+      "request": {
+        "method": "DELETE",
+        "url": "{{base_url}}/v1/booking/flight-orders/{{order_id}}"
+      }
+    },
+    {
+      "name": "9. Issue Ticket",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "var res = pm.response.json();",
+              "if (res.data && res.data.etickets && res.data.etickets[0]) {",
+              "  pm.collectionVariables.set('ticket_number', res.data.etickets[0].number);",
+              "}"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/v1/booking/flight-orders/{{order_id}}/tickets",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" }
+      }
+    },
+    {
+      "name": "10. Void Ticket",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/v1/booking/tickets/{{ticket_number}}/void",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{}" }
+      }
+    },
+    {
+      "name": "11. Reissue Ticket",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/v1/booking/tickets/{{ticket_number}}/reissue",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"newFlightOffer\": {\n    \"itineraries\": [{\n      \"segments\": [{\n        \"departure\": { \"iataCode\": \"DAC\", \"at\": \"2026-09-01T10:00:00\" },\n        \"arrival\":   { \"iataCode\": \"DXB\", \"at\": \"2026-09-01T13:30:00\" },\n        \"carrierCode\": \"EK\",\n        \"number\": \"585\"\n      }]\n    }]\n  },\n  \"fareDifference\": \"50.00\"\n}"
+        }
+      }
+    },
+    {
+      "name": "12. Refund Ticket",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/v1/booking/tickets/{{ticket_number}}/refund",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"originalAmount\": \"320.00\",\n  \"penalty\": \"150.00\"\n}"
+        }
+      }
+    },
+    {
+      "name": "13. Flight Schedule",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/v2/schedule/flights?carrierCode=EK&flightNumber=585&scheduledDepartureDate=2026-08-01",
+          "host": ["{{base_url}}"],
+          "path": ["v2", "schedule", "flights"],
+          "query": [
+            { "key": "carrierCode",              "value": "EK" },
+            { "key": "flightNumber",             "value": "585" },
+            { "key": "scheduledDepartureDate",   "value": "2026-08-01" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "14. Flight Status",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/v2/flight/status?carrierCode=EK&flightNumber=585&scheduledDepartureDate=2026-08-01",
+          "host": ["{{base_url}}"],
+          "path": ["v2", "flight", "status"],
+          "query": [
+            { "key": "carrierCode",            "value": "EK" },
+            { "key": "flightNumber",           "value": "585" },
+            { "key": "scheduledDepartureDate", "value": "2026-08-01" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "15. Ancillaries",
+      "request": {
+        "method": "POST",
+        "url": "{{base_url}}/v1/shopping/flight-offers/upselling",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"data\": {\n    \"flightOffers\": [{ \"id\": \"{{offer_id}}\" }]\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "16. Get Ticket",
+      "request": {
+        "method": "GET",
+        "url": "{{base_url}}/v1/booking/tickets/{{ticket_number}}"
+      }
+    }
+  ]
+}
